@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 # Run the SIMPLE eval CLI over every downloaded simple-eval task, dr-levels 0-2.
 #
 # Usage:
@@ -124,11 +127,6 @@ PY
 # Tasks excluded from the batch. Set SKIP_TASKS="" to run everything.
 SKIP_TASKS=${SKIP_TASKS-"
 G1WholebodyBendHandoverTeleop-v0
-G1WholebodyBendPickAndPlaceMP-v0
-G1WholebodyLocomotionPickBetweenTablesVariant5MP-v0
-G1WholebodyPickNPlaceMP-v0
-G1WholebodyXMoveAndHandoverMP-v0
-G1WholebodyXMoveAndPickMP-v0
 "}
 # shellcheck disable=SC2206  # intentional word splitting on whitespace/newlines
 skip_list=($SKIP_TASKS)

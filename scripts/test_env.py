@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 # from simple.args import args
 import os
@@ -20,8 +16,8 @@ from simple.core.action import ActionCmd
 PRERESET_TASK_STATE = "examples/demo_task_state_dict.json"
 
 def main(
-    env_id: str = "simple/FrankaTabletopGrasp-v0",
-    task: str = "franka_tabletop_grasp",
+    env_id: str = "simple/FrankaTabletopGraspMP-v0",
+    task: str = "franka_tabletop_grasp_mp",
     robot_uid: str = "franka_fr3",
     controller_uid: str = "pd_joint_pos",
     scene_uid: str = "hssd:scene3",
@@ -59,7 +55,17 @@ def main(
     state_dict = None
     observation, info = env.reset(options={"state_dict": state_dict})
     episode_over = False
+    sim_app = env.unwrapped.simulation_app if not headless else None
     while not episode_over:
+        # Pump the Kit event loop.  Without this the viewer never processes its
+        # own events, so the window is frozen and its close button does nothing
+        # (Ctrl+C still works -- that signal is handled here, not by Kit).
+        if sim_app is not None:
+            if not sim_app.is_running():
+                print("Isaac viewer closed; ending episode.")
+                break
+            sim_app.update()
+
         # sample random actions 
         action = env.unwrapped.task.robot.random_action()
 

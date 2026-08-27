@@ -1,10 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
-
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 from typing import Any
 from simple.core.controller import ControllerCfg

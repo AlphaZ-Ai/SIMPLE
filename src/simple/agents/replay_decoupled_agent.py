@@ -1,11 +1,9 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
+"""
 Replay agent that feeds recorded teleop commands through the decoupled WBC
 pipeline with real physics stepping (no state overwriting).
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
 """
 
 import collections

@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 import copy
 import os
@@ -490,6 +486,98 @@ class IsaacSimSimulator(Simulator):
             obj_xform.set_local_pose([0.0, 0.0, -1.0]) # obj["xform"]
             obj["bActive"] = False
 
+    def __apply_demo_box_texture(self, object_prim_path: str, object_info: ObjectActor):
+        """Apply a simple cardboard texture to primitive cube targets.
+
+        This is a render-only affordance for primitive Cube assets, which do not
+        carry a USD file/material of their own. Physics and MuJoCo state replay
+        remain unchanged.
+        """
+        if getattr(object_info.asset, "uid", "") != "cube" and getattr(object_info.asset, "label", "") != "cube":
+            return
+
+        texture_path = os.environ.get(
+            "SIMPLE_PRIMITIVE_BOX_TEXTURE",
+            os.path.abspath("data/textures/simple_demo/cardboard_box.png"),
+        )
+        if not os.path.exists(texture_path):
+            return
+
+        stage = omni.usd.get_context().get_stage()
+        root = stage.GetPrimAtPath(object_prim_path)
+        shader_prims = []
+        if root.IsValid():
+            for prim in Usd.PrimRange(root):
+                if prim.IsA(UsdShade.Shader):
+                    shader_prims.append(prim)
+
+        for prim in shader_prims:
+            shader = UsdShade.Shader(prim)
+            shader.CreateInput("diffuse_color_constant", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(0.72, 0.52, 0.30))
+            shader.CreateInput("diffuse_texture", Sdf.ValueTypeNames.Asset).Set(texture_path)
+            shader.CreateInput("project_uvw", Sdf.ValueTypeNames.Bool).Set(True)
+            shader.CreateInput("reflection_roughness_constant", Sdf.ValueTypeNames.Float).Set(0.82)
+            shader.CreateInput("metallic_constant", Sdf.ValueTypeNames.Float).Set(0.0)
+            shader.CreateInput("specular_level", Sdf.ValueTypeNames.Float).Set(0.12)
+
+    def __add_demo_box_markings(self, object_prim_path: str, object_info: ObjectActor):
+        """Add visible render-only cardboard markings to primitive cube targets.
+
+        These are authored as local USD child cubes under the primitive cube, so
+        they remain attached to the object pose.  They are render-only: MuJoCo
+        replay and physics are unchanged.
+        """
+        if getattr(object_info.asset, "uid", "") != "cube" and getattr(object_info.asset, "label", "") != "cube":
+            return
+
+        stage = omni.usd.get_context().get_stage()
+        parent = stage.GetPrimAtPath(object_prim_path)
+        if not parent.IsValid():
+            return
+
+        def _make_mat(name: str, color: tuple[float, float, float]):
+            mat_path = f"{object_prim_path}/Looks/{name}"
+            material = UsdShade.Material.Define(stage, mat_path)
+            shader = UsdShade.Shader.Define(stage, f"{mat_path}/Shader")
+            shader.CreateIdAttr("UsdPreviewSurface")
+            shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(*color))
+            shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.85)
+            shader.CreateOutput("surface", Sdf.ValueTypeNames.Token)
+            material.CreateSurfaceOutput().ConnectToSource(shader.ConnectableAPI(), "surface")
+            return material
+
+        tape_mat = _make_mat("demo_cardboard_tape", (0.90, 0.72, 0.36))
+        ink_mat = _make_mat("demo_cardboard_ink", (0.08, 0.055, 0.035))
+        edge_mat = _make_mat("demo_cardboard_edge", (0.26, 0.16, 0.08))
+
+        # The parent VisualCuboid is size=1.0 and scaled to the target box size,
+        # so local surface coordinates are approximately +/-0.5.
+        # Use a small positive surface offset to avoid z-fighting.
+        markings = [
+            ("front_tape_v", [0.00, -0.515, 0.00], [0.18, 0.010, 0.92], tape_mat),
+            ("front_tape_h", [0.00, -0.518, 0.02], [0.88, 0.010, 0.10], tape_mat),
+            ("front_barcode", [-0.24, -0.521, -0.22], [0.20, 0.010, 0.14], ink_mat),
+            ("front_label_1", [0.22, -0.521, 0.20], [0.26, 0.010, 0.04], ink_mat),
+            ("front_label_2", [0.22, -0.521, 0.12], [0.18, 0.010, 0.035], ink_mat),
+            ("front_edge_l", [-0.47, -0.522, 0.00], [0.025, 0.010, 0.92], edge_mat),
+            ("front_edge_r", [0.47, -0.522, 0.00], [0.025, 0.010, 0.92], edge_mat),
+            ("top_tape", [0.00, 0.00, 0.515], [0.18, 0.86, 0.010], tape_mat),
+            ("right_tape", [0.515, 0.00, 0.02], [0.010, 0.70, 0.10], tape_mat),
+        ]
+
+        for name, pos, scale, material in markings:
+            prim_path = f"{object_prim_path}/demo_cardboard_{name}"
+            prim = stage.GetPrimAtPath(prim_path)
+            if prim.IsValid():
+                stage.RemovePrim(prim_path)
+            cube = UsdGeom.Cube.Define(stage, prim_path)
+            cube.CreateSizeAttr(1.0)
+            xform = UsdGeom.Xformable(cube.GetPrim())
+            xform.ClearXformOpOrder()
+            xform.AddTranslateOp().Set(Gf.Vec3d(*[float(v) for v in pos]))
+            xform.AddScaleOp().Set(Gf.Vec3f(*[float(v) for v in scale]))
+            UsdShade.MaterialBindingAPI.Apply(cube.GetPrim()).Bind(material)
+
     def __pre_add_objects(self):
         for obj in self.task.preload_objects():
             self.__create_object(obj.asset.label, obj)
@@ -509,17 +597,40 @@ class IsaacSimSimulator(Simulator):
         #     obj_rigid = RigidPrim(prim_path=object_prim_path)
         # else:
 
-        object_usd_path = os.path.abspath(resolve_data_path(object_info.asset.usd_path,auto_download=True))
-        
-        isaacsim_stage.add_reference_to_stage(usd_path=object_usd_path, prim_path=object_prim_path)
+        object_usd_path = getattr(object_info.asset, "usd_path", None)
+        if object_usd_path:
+            object_usd_path = os.path.abspath(resolve_data_path(object_usd_path, auto_download=True))
+            isaacsim_stage.add_reference_to_stage(usd_path=object_usd_path, prim_path=object_prim_path)
 
-        obj_xform = XFormPrim(prim_path=object_prim_path)
-        geom_prim_path = f'{object_prim_path}/Meshes'
-        obj_geom = GeometryPrim(prim_path=geom_prim_path)
-        obj_rigid = RigidPrim(prim_path=geom_prim_path)
-        obj_rigid.disable_rigid_body_physics()
-        obj_collision_geom = GeometryPrim(f"{geom_prim_path}/collision")
-        obj_collision_geom.set_collision_enabled(False)
+            obj_xform = XFormPrim(prim_path=object_prim_path)
+            geom_prim_path = f'{object_prim_path}/Meshes'
+            obj_geom = GeometryPrim(prim_path=geom_prim_path)
+            obj_rigid = RigidPrim(prim_path=geom_prim_path)
+            obj_rigid.disable_rigid_body_physics()
+            obj_collision_geom = GeometryPrim(f"{geom_prim_path}/collision")
+            obj_collision_geom.set_collision_enabled(False)
+        elif hasattr(object_info.asset, "size"):
+            # Primitive assets such as simple.assets.primitive.Cube are valid in
+            # MuJoCo but do not carry a USD file. Create an IsaacSim visual
+            # cuboid with the same extents so mujoco_isaac replay can render
+            # these branch-local cube tasks. Pose/visibility are still driven
+            # by __update_object(), matching the USD-object path above.
+            cuboid.VisualCuboid(
+                prim_path=object_prim_path,
+                name=str(object_info.asset.label),
+                position=np.array([0.0, 0.0, -1.0]),
+                orientation=np.array([1.0, 0.0, 0.0, 0.0]),
+                size=1.0,
+                scale=np.asarray(object_info.asset.size, dtype=np.float32),
+                color=np.array([0.72, 0.52, 0.30]),
+            )
+            self.__apply_demo_box_texture(object_prim_path, object_info)
+            self.__add_demo_box_markings(object_prim_path, object_info)
+            obj_xform = XFormPrim(prim_path=object_prim_path)
+        else:
+            raise AttributeError(
+                f"IsaacSim object asset {object_info.asset!r} has neither usd_path nor primitive size"
+            )
 
         usd_prim = isaacsim_prims.get_prim_at_path(object_prim_path)
         semantics=[("prim", f"{obj_id}")]
@@ -870,7 +981,11 @@ class IsaacSimSimulator(Simulator):
         self.robot_hand = robot_hand
 
     def add_cameras(self):
+        if not hasattr(self, "cameras"):
+            self.cameras = {}
         for cam_key, cam_info in self.task.layout.cameras.items():
+            if cam_key in self.cameras:
+                continue
             if cam_info.mount == "eye_in_hand":
                 # FIXME
                 if cam_key == "wrist_left":

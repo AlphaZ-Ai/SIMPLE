@@ -1,3 +1,6 @@
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 from simple.core.randomizer import Randomizer, RandomizerCfg
 from dataclasses import dataclass, field
 from typing import Type

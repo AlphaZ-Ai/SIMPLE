@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Clean, scale, and validate articulated-object MJCF files."""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
+"""
+Clean, scale, and validate articulated-object MJCF files.
+"""
 
 from __future__ import annotations
 

@@ -1,3 +1,6 @@
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 import typer
 from typing_extensions import Annotated
 import gymnasium as gym

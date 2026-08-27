@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Export an articulated-object URDF to the USD layout expected by SIMPLE."""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
+"""
+Export an articulated-object URDF to the USD layout expected by SIMPLE.
+"""
 
 from __future__ import annotations
 

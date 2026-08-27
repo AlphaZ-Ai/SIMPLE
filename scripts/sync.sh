@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 # Sync script: Synchronize files from SRC to DST, excluding venv, data, and third_party
 
@@ -28,15 +30,17 @@ Synchronize files from SRC to DST folder, excluding:
   - docs/build/*
   - .claude/
   - .runtime-state/
+  - scripts/sync.sh
 
 Arguments:
   SRC           Source directory (default: current directory)
   DST           Destination directory (required if SRC is provided)
 
 Options:
-  --dry-run     Show what would be synced without making changes
-  --delete      Delete files in DST that don't exist in SRC
-  --help        Show this help message
+  --dry-run        Show what would be synced without making changes
+  --delete         Delete files in DST that don't exist in SRC
+  --no-submodules  Skip syncing submodule commits (DST must be a git clone)
+  --help           Show this help message
 
 Examples:
   # Sync current directory to remote
@@ -54,6 +58,7 @@ EOF
 # Parse arguments
 DRY_RUN=""
 DELETE=""
+SYNC_SUBMODULES="1"
 
 for arg in "$@"; do
     case "$arg" in
@@ -66,6 +71,9 @@ for arg in "$@"; do
             ;;
         --delete)
             DELETE="--delete"
+            ;;
+        --no-submodules)
+            SYNC_SUBMODULES=""
             ;;
     esac
 done
@@ -93,7 +101,7 @@ echo "📁 Sync Configuration"
 echo "===================="
 echo "Source:      $SRC"
 echo "Destination: $DST"
-echo "Excluding:   .venv*/, data/, third_party/, typings/, */.doctrees/, cache/*, .uv-cache/, .vscode/, output/*, .mypy_cache/, */.cache/*, docs/build/*, .claude/, .runtime-state/"
+echo "Excluding:   .venv*/, data/, third_party/, typings/, */.doctrees/, cache/*, .uv-cache/, .vscode/, output/*, .mypy_cache/, */.cache/*, docs/build/*, .claude/, .runtime-state/, scripts/sync.sh"
 [ -n "$DRY_RUN" ] && echo "Mode:        🔍 DRY RUN (no changes)"
 [ -n "$DELETE" ] && echo "Delete:      ✓ Enabled"
 echo ""
@@ -116,6 +124,7 @@ RSYNC_OPTS=(
     --exclude='docs/build/*'      # Exclude built documentation
     --exclude=.claude             # Exclude claude configuration
     --exclude=.runtime-state      # Exclude runtime state
+    --exclude='scripts/sync.sh'    # Exclude sync script itself
     --exclude=.git                # Exclude git
     --exclude=.gitignore          # Exclude gitignore
     --exclude=.env                # Exclude env files
@@ -129,11 +138,61 @@ RSYNC_OPTS=(
 [ -n "$DRY_RUN" ] && RSYNC_OPTS+=(--dry-run)
 [ -n "$DELETE" ] && RSYNC_OPTS+=(--delete)
 
+# Sync submodule commits: force each DST submodule to the exact commit
+# currently checked out in SRC. rsync excludes .git, so submodule pointers
+# are git metadata that must be replicated explicitly.
+sync_submodules() {
+    if [ ! -d "$SRC/.git" ] && [ ! -f "$SRC/.git" ]; then
+        echo "⚠️  Source is not a git repo; skipping submodule sync."
+        return 0
+    fi
+    if [ ! -d "$DST/.git" ] && [ ! -f "$DST/.git" ]; then
+        echo "⚠️  Destination is not a git clone; skipping submodule sync."
+        echo "    (run 'git clone' there first, or pass --no-submodules)"
+        return 0
+    fi
+
+    echo ""
+    echo "🔗 Syncing submodule commits..."
+
+    # Each line: "<submodule_path> <checked-out SHA in source>"
+    git -C "$SRC" submodule foreach --quiet 'echo "$sm_path $(git rev-parse HEAD)"' \
+    | while read -r sm_path sha; do
+        [ -z "$sm_path" ] && continue
+        if [ -n "$DRY_RUN" ]; then
+            echo "  [dry-run] $sm_path -> $sha"
+            continue
+        fi
+
+        echo "  $sm_path -> $sha"
+        # Ensure the submodule exists/initialized on the destination.
+        git -C "$DST" submodule update --init -- "$sm_path" >/dev/null 2>&1 || true
+
+        if [ ! -e "$DST/$sm_path/.git" ]; then
+            echo "    ⚠️  not initialized on destination; skipping"
+            continue
+        fi
+
+        # Make sure the target commit is available, then check it out.
+        if ! git -C "$DST/$sm_path" cat-file -e "${sha}^{commit}" 2>/dev/null; then
+            git -C "$DST/$sm_path" fetch --all --quiet 2>/dev/null || true
+        fi
+        if git -C "$DST/$sm_path" checkout --quiet "$sha" 2>/dev/null; then
+            # Record the gitlink in the superproject so DST status is clean.
+            git -C "$DST" add "$sm_path" 2>/dev/null || true
+        else
+            echo "    ❌ commit $sha not found in $sm_path (fetch may have failed)"
+        fi
+    done
+    echo "  ✓ Submodule commits synced"
+}
+
 # Run rsync
 echo "🔄 Syncing files..."
 echo ""
 
 if rsync "${RSYNC_OPTS[@]}" "$SRC/" "$DST/"; then
+    [ -n "$SYNC_SUBMODULES" ] && sync_submodules
     echo ""
     echo "✅ Sync completed successfully!"
     if [ -n "$DRY_RUN" ]; then

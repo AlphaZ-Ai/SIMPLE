@@ -45,6 +45,9 @@ html_theme_options = {
 }
 
 # MyST markdown config
+# Generate anchors for h1-h4 so in-page links like [x](#some-heading) resolve
+myst_heading_anchors = 4
+
 myst_enable_extensions = [
     "dollarmath",  # For inline LaTeX
     "colon_fence"  # ::: fenced blocks
@@ -55,7 +58,18 @@ autodoc_member_order = "bysource"
 autodoc_typehints = "description"
 
 templates_path = ['_templates']
-exclude_patterns = []
+# Superseded pages kept in the tree but not built:
+#   nix-runtime.md / robo-nix.md -> replaced by nix-setup/runtime.md and
+#   nix-setup/installation.md; *.old.md -> previous revisions of a tutorial;
+#   tutorials/replay.md and tutorials/eval.md -> superseded by the per-pipeline
+#   Replay & Render / Evaluation pages under decoupled-wbc/ and sonic-wbc/.
+exclude_patterns = [
+    "nix-runtime.md",
+    "robo-nix.md",
+    "**/*.old.md",
+    "tutorials/replay.md",
+    "tutorials/eval.md",
+]
 
 
 

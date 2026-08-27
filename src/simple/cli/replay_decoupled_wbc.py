@@ -1,14 +1,12 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
+"""
 Replay recorded teleop demonstrations and record a new dataset with newly rendered images.
 
 Reads a LeRobot dataset recorded by render_decoupled_wbc.py, restores the scene configuration,
 replays actions through the WBC pipeline, and records a new dataset with Isaac Sim/MuJoCo
 rendered images combined with all proprioceptive/action data.
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
 """
 
 from __future__ import annotations

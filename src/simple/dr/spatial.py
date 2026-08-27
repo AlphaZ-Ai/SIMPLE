@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
@@ -101,8 +97,9 @@ class SpatialDR(Randomizer):
         if self._inner_state is None:
             self._inner_state = {}
 
-        # Determine surface heights for different regions
-        surface_heights = {"default": table_height}
+        # Determine surface heights for different regions. "ground"/"floor" is
+        # the z=0 world plane, for objects placed on the floor rather than a table.
+        surface_heights = {"default": table_height, "ground": 0.0, "floor": 0.0}
         if hasattr(layout.scene, "table") and layout.scene.table is not None:
             surface_heights["table"] = layout.scene.table.pose.position[2] + 0.5 * layout.scene.table.size[2]
         
@@ -238,8 +235,15 @@ class SpatialDR(Randomizer):
 
 
     def _random_place_one_object(self, obj: Object, region: Box, objtype: str, surface_height: float = 0.0):
-        
-        object_msh=trimesh.load_mesh(obj.asset.collision_mesh_curobo)
+
+        from simple.assets.primitive import Primitive
+
+        # Primitive targets (e.g. a cube) have no mesh file on disk; build the
+        # collision proxy in memory from their extent instead.
+        if isinstance(obj.asset, Primitive):
+            object_msh = trimesh.creation.box(extents=obj.asset.size)
+        else:
+            object_msh = trimesh.load_mesh(obj.asset.collision_mesh_curobo)
         for _ in range(self.cfg.placement_attempts):
             if objtype == "container":
                 stable_pose = obj.asset.stable_poses[0] # only use the first stable pose for container

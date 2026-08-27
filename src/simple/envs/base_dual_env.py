@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -80,7 +76,7 @@ class BaseDualSim(gym.Env):
         assert not _ISAAC_LOADED, "Isaac already loaded"
         _preload_native_runtime()
         import isaacsim
-        from omni.isaac.kit import SimulationApp # type: ignore
+        from isaacsim import SimulationApp  # type: ignore
         from simple.engines.isaac_app import create_simulation_app
 
         # Step 1: Create SimulationApp
@@ -89,19 +85,19 @@ class BaseDualSim(gym.Env):
             headless=headless,
             anti_aliasing=0,
             hide_ui=False,
+            webrtc=webrtc,
         )
         
         # Step 2: Enable WebRTC streaming if requested
         if webrtc:
-            from omni.isaac.core.utils.extensions import enable_extension
-            
             # Determine Isaac Sim version and setup accordingly
             try:
                 from isaacsim import util  # This exists in Isaac Sim 4.5.0+
-                # Isaac Sim 4.5.0+ behavior
+                # Isaac Sim 4.5.0+ behavior. The livestream extension itself is
+                # enabled at startup by create_simulation_app().
                 _SIMULATION_APP.set_setting('/app/window/drawMouse', True)
-                enable_extension('omni.kit.livestream.webrtc')
             except ImportError:
+                from omni.isaac.core.utils.extensions import enable_extension
                 # Isaac Sim 4.2.0 behavior
                 _SIMULATION_APP.set_setting('/app/window/drawMouse', True)
                 _SIMULATION_APP.set_setting('/app/livestream/proto', 'ws')
@@ -131,13 +127,13 @@ class BaseDualSim(gym.Env):
         self.mujoco.close()
         if _ISAAC_LOADED:
             assert self.isaac is not None
-            while (
+            """while (
                 "isaac" in self.sim_mode and
                 not self.headless and 
                 self.simulation_app.is_running() # type: ignore
             ):
                 self.isaac.update_visuals()
-                self.simulation_app.update() # type: ignore
+                self.simulation_app.update() # type: ignore"""
             print("Closing IsaacSim simulator...")
             _SIMULATION_APP.close()
         super().close()

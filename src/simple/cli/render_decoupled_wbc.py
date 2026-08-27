@@ -1,6 +1,7 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
+"""
 Replay recorded teleop demonstrations in MuJoCo + Isaac Sim for rendering.
 
 Reads a LeRobot dataset recorded by teleop_decoupled.py, restores the exact
@@ -13,9 +14,6 @@ from the dataset.
 
 When --record is enabled, a new LeRobot dataset is written with Isaac Sim
 rendered images combined with all original proprioceptive/action data.
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
 """
 
 from __future__ import annotations
@@ -85,6 +83,8 @@ def _init_replay_exporter(
     obj_names: list[str],
     joint_names: list[str],
     ego_view_shape=None,
+    source_features: dict | None = None,
+    source_modality_config: dict | None = None,
 ):
     """Create a Gr00tDataExporter for recording replayed Isaac Sim data."""
     from decoupled_wbc.control.robot_model.instantiation.g1 import (
@@ -93,32 +93,44 @@ def _init_replay_exporter(
     from decoupled_wbc.data.exporter import Gr00tDataExporter
     from decoupled_wbc.data.utils import get_dataset_features, get_modality_config
 
-    robot_model = instantiate_g1_robot_model()
-    features = get_dataset_features(robot_model)
-    set_ego_view_feature_shape(features, ego_view_shape)
-    validate_existing_ego_view_feature_shape(save_dir, ego_view_shape)
-    features["observation.state"]["names"] = joint_names # state joint names
-    modality_config = get_modality_config(robot_model)
+    if source_features is not None:
+        # Rendering should preserve the source LeRobot schema.  This is required
+        # for SONIC WBC datasets whose action is [64D token | 14D hands] rather
+        # than the 43D decoded joint action used by decoupled WBC defaults.
+        features = json.loads(json.dumps(source_features))
+        modality_config = json.loads(json.dumps(source_modality_config or {}))
+        set_ego_view_feature_shape(features, ego_view_shape)
+        for feature in features.values():
+            if isinstance(feature, dict) and isinstance(feature.get("shape"), list):
+                feature["shape"] = tuple(feature["shape"])
+        validate_existing_ego_view_feature_shape(save_dir, ego_view_shape)
+    else:
+        robot_model = instantiate_g1_robot_model()
+        features = get_dataset_features(robot_model)
+        set_ego_view_feature_shape(features, ego_view_shape)
+        validate_existing_ego_view_feature_shape(save_dir, ego_view_shape)
+        features["observation.state"]["names"] = joint_names # state joint names
+        modality_config = get_modality_config(robot_model)
 
-    # # Add torso RPY command feature (3D: roll, pitch, yaw)
-    # features["observation.torso_rpy_command"] = {
-    #     "dtype": "float64",
-    #     "shape": (3,),
-    #     "names": ["roll", "pitch", "yaw"],
-    # }
+        # # Add torso RPY command feature (3D: roll, pitch, yaw)
+        # features["observation.torso_rpy_command"] = {
+        #     "dtype": "float64",
+        #     "shape": (3,),
+        #     "names": ["roll", "pitch", "yaw"],
+        # }
 
-    # Add object poses feature: each object has 7D (pos xyz + quat wxyz)
-    num_objects = len(obj_names)
-    if num_objects > 0:
-        obj_names_flat = []
-        for name in obj_names:
-            for suffix in ["pos_x", "pos_y", "pos_z", "quat_w", "quat_x", "quat_y", "quat_z"]:
-                obj_names_flat.append(f"{name}.{suffix}")
-        features["observation.object_poses"] = {
-            "dtype": "float64",
-            "shape": (num_objects * 7,),
-            "names": obj_names_flat,
-        }
+        # Add object poses feature: each object has 7D (pos xyz + quat wxyz)
+        num_objects = len(obj_names)
+        if num_objects > 0:
+            obj_names_flat = []
+            for name in obj_names:
+                for suffix in ["pos_x", "pos_y", "pos_z", "quat_w", "quat_x", "quat_y", "quat_z"]:
+                    obj_names_flat.append(f"{name}.{suffix}")
+            features["observation.object_poses"] = {
+                "dtype": "float64",
+                "shape": (num_objects * 7,),
+                "names": obj_names_flat,
+            }
 
     exporter = Gr00tDataExporter.create(
         save_root=save_dir,
@@ -236,6 +248,9 @@ def main(
 
     # Determine features available
     features = dataset_info["features"]
+    modality_path = Path(data_dir) / "meta" / "modality.json"
+    with open(modality_path) as f:
+        source_modality_config = json.load(f)
     has_base_pose = "observation.base_pose" in features
     has_base_vel = "observation.base_vel" in features
     has_object_poses = "observation.object_poses" in features
@@ -296,6 +311,37 @@ def main(
 
             obj_names_labels = list(sonic_env.mujoco.mj_objects.keys())
             obj_names = list(sonic_env.task.layout.actors[i].asset.name.replace(" ","_") for i in obj_names_labels)
+
+            # Resolve logical dataset object names (e.g. target) to MuJoCo free-joint
+            # object names.  Primitive cube targets on this branch are exposed as
+            # layout key "target" / asset name "box", but the actual MuJoCo
+            # joint is "cube_joint".  Keep exporter feature names unchanged; only
+            # use this mapping for setting MuJoCo object poses before Isaac render.
+            mj_joint_names = {mujoco.mj_id2name(mujoco_sim.mjModel, mujoco.mjtObj.mjOBJ_JOINT, i) for i in range(mujoco_sim.mjModel.njnt)}
+            robot_joint_names = set(robot.joint_names)
+            free_object_joint_bases = [
+                j[:-6] for j in mj_joint_names
+                if j.endswith("_joint") and j not in robot_joint_names and j != "floating_base_joint"
+            ]
+            obj_mj_names = []
+            for label, display_name in zip(obj_names_labels, obj_names):
+                candidates = [label, display_name]
+                actor = sonic_env.task.layout.actors.get(label)
+                asset = getattr(actor, "asset", None)
+                for attr in ("uid", "name"):
+                    val = getattr(asset, attr, None)
+                    if isinstance(val, str):
+                        candidates.append(val.replace(" ", "_"))
+                chosen = next((c for c in candidates if f"{c}_joint" in mj_joint_names), None)
+                if chosen is None and len(obj_names_labels) == 1 and len(free_object_joint_bases) == 1:
+                    chosen = free_object_joint_bases[0]
+                if chosen is None:
+                    raise KeyError(
+                        f"Cannot map object {label!r} to a MuJoCo free joint; "
+                        f"candidates={candidates}, free_object_joint_bases={free_object_joint_bases}"
+                    )
+                obj_mj_names.append(chosen)
+
             num_objects = len(obj_names_labels)
 
             # Init exporter after first reset so obj_names are available
@@ -306,6 +352,8 @@ def main(
                     dataset_fps, task_prompt, obj_names_labels,
                     robot.joint_names,
                     obs["head_stereo_left"].shape,
+                    source_features=features,
+                    source_modality_config=source_modality_config,
                 )
                 print(f"[Record] Exporter initialized, saving to {save_dir}")
                 print(f"[Record] Ego view shape: {obs['head_stereo_left'].shape}")
@@ -347,7 +395,7 @@ def main(
                         pose_7d = obj_poses_flat[i * 7 : (i + 1) * 7]
                         obj_positions.append(pose_7d[:3])
                         obj_orientations.append(pose_7d[3:])
-                    mujoco_sim.set_object_poses(obj_names, obj_positions, obj_orientations)
+                    mujoco_sim.set_object_poses(obj_mj_names, obj_positions, obj_orientations)
 
                 # --- Recompute MuJoCo derived quantities (xpos, xquat, etc.) ---
                 mujoco.mj_forward(mujoco_sim.mjModel, mujoco_sim.mjData)

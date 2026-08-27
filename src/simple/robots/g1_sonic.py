@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 import os
 import numpy as np
@@ -40,7 +36,7 @@ LEFT_HAND_JOINTS = ["left_hand_thumb_0_joint", "left_hand_thumb_1_joint", "left_
 RIGHT_HAND_JOINTS = ["right_hand_thumb_0_joint", "right_hand_thumb_1_joint", "right_hand_thumb_2_joint", "right_hand_index_0_joint", "right_hand_index_1_joint", "right_hand_middle_0_joint", "right_hand_middle_1_joint"]
 
 WHOLE_BODY_JOINTS = LEFT_LEG_JOINTS + RIGHT_LEFT_JOINTS + WAIST_JOINTS + LEFT_ARM_JOINTS + RIGHT_ARM_JOINTS + LEFT_HAND_JOINTS + RIGHT_HAND_JOINTS
-STABILIZE_VEL_THRESHOLD: float = 1e-4 # max |qvel[0:6]| to consider robot stable
+STABILIZE_VEL_THRESHOLD: float = 1e-3 # max |qvel[0:6]| to consider robot stable
 MIN_STABILIZE_STEPS: int = 100 # min steps before velocity check is valid (1s at 200Hz)
 
 @RobotRegistry.register("g1_sonic")
@@ -88,11 +84,12 @@ class G1Sonic(CuRoboMixin,Humanoid,Robot,HeadCamMountable,HasDexterousHand):
         ),
         left_arm=PDJointPosControllerCfg(
             joint_names=LEFT_ARM_JOINTS,
-            init_qpos=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            # init_qpos=[0.09,  -0.02,   0.0,   1.43,   0.0,     0.0,     0.0],
+            init_qpos=[0.5,      0.,       0.2,       0.55,     0.,       0.,       0.,],
         ),
         right_arm=PDJointPosControllerCfg(
             joint_names=RIGHT_ARM_JOINTS,
-            init_qpos=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            init_qpos=[0.5,      0.,      -0.2,      0.55,     0.,       0.,       0.],
         ),
         left_eef=DexHandEEFControllerCfg(
             joint_names=LEFT_HAND_JOINTS,

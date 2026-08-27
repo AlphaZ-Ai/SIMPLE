@@ -1,3 +1,6 @@
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 import numpy as np
 import torch
 import transforms3d as t3d

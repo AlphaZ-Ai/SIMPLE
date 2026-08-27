@@ -1,6 +1,7 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
+"""
 DreamZero G1 Whole-Body baseline adapter.
 
 This agent is the client-side translator between SIMPLE's G1 whole-body envs
@@ -29,8 +30,6 @@ The 36-D action layout is identical to Psi0's because the training data
 
 If you retrain DreamZero with a different action layout, update the
 unpacking code below AND from_dreamzero_upper_joints().
-
-Copyright (c) 2025 USC PSI Lab and Contributors.
 """
 
 import os

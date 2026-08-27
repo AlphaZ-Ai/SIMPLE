@@ -1,3 +1,6 @@
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 """
 TCP video sender: connects to the Pico VR client and streams H.264 video.
 

@@ -1,10 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
-
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 from typing import TypeVar, Generic
 from typing import Tuple, List, Any
@@ -128,7 +123,7 @@ class FrankaMixin(CuRoboMixin, WristCamMountable, HasParallelGripper):
             actuators[f"joint{i}"] = mjData.actuator(f'actuator{i}')
             joints[f"joint{i}"] = mjData.joint(f'joint{i}')
         for i in range(1, 3):
-            actuators[f"finger_joint{i}"] = mjData.actuator(f'finger_joint{i}')
+            actuators[f"finger_joint{i}"] = mjData.actuator(f'finger_actuator{i}')
             joints[f"finger_joint{i}"] = mjData.joint(f'finger_joint{i}')
         self.joints = joints
         self.actuators = actuators

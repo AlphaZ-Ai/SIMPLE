@@ -1,3 +1,6 @@
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 import zmq
 import mujoco
 import numpy as np

@@ -1,3 +1,6 @@
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 """
 SIMPLE — Cosmos3 policy agent for the MOTION-PLANNING (`eval`) path.
 
@@ -8,8 +11,6 @@ differs: MP uses `eval_move_actuators` (direct actuators), not `vla_cmd` (WBC go
 
 Self-contained (copies CosmosPredictClient + action layout) so it doesn't import the
 decoupled-WBC agent's WBC dependencies, which the MP path does not use.
-
-Copyright (c) 2025 Songlin Wei and Contributors. Licensed per LICENSE.
 """
 
 import base64

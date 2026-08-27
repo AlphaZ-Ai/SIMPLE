@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 """
 USD Visualizer and Recorder for SIMPLE Environment (Replicator Version)
 
@@ -32,7 +35,7 @@ def init_isaac_sim(headless: bool, webrtc: bool = False, width: int = 1920, heig
     print(f"Initializing Isaac Sim (headless={headless}, webrtc={webrtc})...")
     
     import isaacsim
-    from omni.isaac.kit import SimulationApp
+    from isaacsim import SimulationApp
 
     # Step 1: Create SimulationApp (matching SIMPLE's config)
     _SIMULATION_APP = create_simulation_app(

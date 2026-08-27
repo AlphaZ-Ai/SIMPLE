@@ -1,6 +1,7 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
+"""
 DreamZero G1 Whole-Body baseline adapter — Decoupled WBC variant.
 
 This is the decoupled-WBC counterpart of `simple.baselines.dreamzero`. It
@@ -17,8 +18,6 @@ G1Wholebody envs.
 
 The 36-D action layout and 32-D state packing are identical to
 `dreamzero.py`; see that file's docstring for the full breakdown.
-
-Copyright (c) 2025 USC PSI Lab and Contributors.
 """
 
 import os

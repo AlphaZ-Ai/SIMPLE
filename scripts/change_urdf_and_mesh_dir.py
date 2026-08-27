@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Sanitize mesh names and uniformly scale an articulated-object URDF."""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
+"""
+Sanitize mesh names and uniformly scale an articulated-object URDF.
+"""
 
 from __future__ import annotations
 

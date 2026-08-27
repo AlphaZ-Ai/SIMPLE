@@ -1,3 +1,6 @@
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 import os
 from dotenv import load_dotenv
 from huggingface_hub import snapshot_download, hf_hub_download, list_repo_files

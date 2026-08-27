@@ -1,3 +1,6 @@
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
+
 from collections import deque
 import numpy as np
 from .base_agent import BaseAgent, ActionCommand

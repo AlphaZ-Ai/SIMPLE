@@ -7,8 +7,4 @@
 
 installation
 run_env
-data_gen
-teleop
-replay
-eval
-docker
+wholebody_loco_manipulation

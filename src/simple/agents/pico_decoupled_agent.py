@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 import time
 import cv2
@@ -483,25 +479,25 @@ class PicoDecoupledAgent(SonicWbcAgent):
         self._cached_left_hand_q = self._dwbc_robot_model.get_hand_actuated_joints(wbc_action["q"], side="left")
         self._cached_right_hand_q = self._dwbc_robot_model.get_hand_actuated_joints(wbc_action["q"], side="right")
 
-        # Handle elastic band descent
-        if self._dropping and self.robot.elastic_band and self.robot.elastic_band.enable:
-            self.robot.elastic_band.length -= self._drop_rate * self._control_dt
-            if self.robot.elastic_band.length <= -0.25 and abs(self.robot.pelvis_vz) < 0.05:
-                self.robot.elastic_band.enable = False
-                self._dropping = False
-                print(f"[PicoDecoupled] Robot landed (pelvis Z={self.robot.pelvis_z:.3f} m)")
+        # # Handle elastic band descent
+        # if self._dropping and self.robot.elastic_band and self.robot.elastic_band.enable:
+        #     self.robot.elastic_band.length -= self._drop_rate * self._control_dt
+        #     if self.robot.elastic_band.length <= -0.25 and abs(self.robot.pelvis_vz) < 0.05:
+        #         self.robot.elastic_band.enable = False
+        #         self._dropping = False
+        #         print(f"[PicoDecoupled] Robot landed (pelvis Z={self.robot.pelvis_z:.3f} m)")
 
-        # While elastic band is active, only apply band forces (ignore WBC output)
-        if (
-            self.robot.elastic_band
-            and self.robot.elastic_band.enable
-            and self.robot.use_floating_root_link
-        ):
-            return ActionCmd(
-                "elastic_band",
-                dropping=self._dropping,
-                drop_rate=self._drop_rate,
-            )
+        # # While elastic band is active, only apply band forces (ignore WBC output)
+        # if (
+        #     self.robot.elastic_band
+        #     and self.robot.elastic_band.enable
+        #     and self.robot.use_floating_root_link
+        # ):
+        #     return ActionCmd(
+        #         "elastic_band",
+        #         dropping=self._dropping,
+        #         drop_rate=self._drop_rate,
+        #     )
 
         return ActionCmd( # all synced!
             "decoupled_wbc",

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 simple_nix_repo_root() {
   local script_dir

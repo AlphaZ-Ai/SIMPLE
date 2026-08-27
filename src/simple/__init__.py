@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 __version__ = "0.1.0"
 __all__ = ["__version__", "EvalConfig", "EvalEpisodeResult", "EvalResult", "EnvRunner", "evaluate_policy", "run_with_tui"]

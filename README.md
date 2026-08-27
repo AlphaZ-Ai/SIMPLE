@@ -321,7 +321,7 @@ Supported Wholebody Teleop Tasks Include:
 * `simple/G1WholebodyOpenOvenTeleop-v0`
 * `simple/G1WholebodyCloseDoorTeleop-v0`
 * `simple/G1WholebodyXMovePickTeleop-v0`
-* `simple/G1WholebodyXMoveBendPickTeleop-v0`
+* `simple/G1WholebodyXMoveBendCarryBoxSonic-v0`
 * `simple/G1WholebodyLocomotionPickBetweenTablesTeleop-v0`
 * `simple/G1WholebodyPickAndPlaceAndHugContainerTeleop-v0`
 * `simple/G1WholebodyHandoverTeleop-v0`
@@ -388,7 +388,7 @@ For data generated via the automated motion planning pipeline (`datagen.py`), us
 **Example Usage:**
 ```bash
 python scripts/postprocess_psi0.py \
-  --sim-root="data/datagen*/simple/G1WholebodyXMoveBendPickMP-v0/level-0/" \
+  --sim-root="data/datagen*/simple/G1WholebodyBendPickMP-v0/level-0/" \
   --out-dir=data/processed_psi0/G1WholebodyXMoveBendPickMP-v0 \
   --skip=60
 

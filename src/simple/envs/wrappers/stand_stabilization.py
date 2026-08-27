@@ -1,11 +1,10 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
+"""
 Run a brief "stand" warmup inside `env.reset` so agents see a stabilized
 robot from step 0, instead of every baseline duplicating the same 60-step
 stand-loop boilerplate.
-
-Copyright (c) 2025 USC PSI Lab and Contributors.
 """
 
 from __future__ import annotations

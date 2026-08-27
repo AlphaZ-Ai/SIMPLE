@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 import os
 import cv2
@@ -68,5 +64,12 @@ class VideoWriter:
             os.remove(newfilename)
 
         if self.is_ffmpeg_installed:
-            os.system(f"ffmpeg -i {self.filename} -vcodec libx264 {newfilename} > /dev/null 2>&1")
-            os.system(f"rm {self.filename}") 
+            ret = os.system(f"ffmpeg -y -i {self.filename} -vcodec libx264 {newfilename} > /dev/null 2>&1")
+            if ret == 0 and os.path.exists(newfilename):
+                os.system(f"rm {self.filename}")
+            else:
+                print(f"WARNING: ffmpeg transcode failed for {self.filename}; keeping raw mp4 as {newfilename}")
+                if os.path.exists(self.filename):
+                    os.replace(self.filename, newfilename)
+        else:
+            os.replace(self.filename, newfilename)

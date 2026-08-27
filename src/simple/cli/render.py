@@ -1,9 +1,6 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
 import os
 os.environ["_TYPER_STANDARD_TRACEBACK"]="1"
 import os, sys
@@ -13,7 +10,7 @@ from simple.engines.isaac_app import create_simulation_app
 import typer
 from typing_extensions import Annotated
 import isaacsim
-from omni.isaac.kit import SimulationApp
+from isaacsim import SimulationApp
 simulation_app = create_simulation_app(SimulationApp, headless=False)
 
 import cv2

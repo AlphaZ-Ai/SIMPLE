@@ -1,9 +1,5 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 from typing import TYPE_CHECKING, Dict, Tuple, Any, List
@@ -182,6 +178,29 @@ class MujocoSimulator(Simulator):
         else:
             z_minus = 0.0
 
+        # Robot MJCFs vary: the g1/vega models define a "groundplane" material
+        # inline, the menagerie-style ones (franka panda.xml) leave it to a scene
+        # wrapper we never load.  Supply it here when it is missing, so the ground
+        # geom below compiles against any robot.
+        if not any(m.name == "groundplane" for m in mjSpec.materials):
+            if not any(t.name == "groundplane" for t in mjSpec.textures):
+                tex = mjSpec.add_texture()
+                tex.name = "groundplane"
+                tex.type = mujoco.mjtTexture.mjTEXTURE_2D
+                tex.builtin = mujoco.mjtBuiltin.mjBUILTIN_CHECKER
+                tex.rgb1 = [0.2, 0.3, 0.4]
+                tex.rgb2 = [0.1, 0.2, 0.3]
+                tex.mark = mujoco.mjtMark.mjMARK_EDGE
+                tex.markrgb = [0.8, 0.8, 0.8]
+                tex.width = 300
+                tex.height = 300
+            mat = mjSpec.add_material()
+            mat.name = "groundplane"
+            mat.textures[mujoco.mjtTextureRole.mjTEXROLE_RGB] = "groundplane"
+            mat.texuniform = True
+            mat.texrepeat = [5, 5]
+            mat.reflectance = 0.2
+
         # add ground plane
         ground = mj_worldbody.add_geom(
             type=mujoco.mjtGeom.mjGEOM_PLANE,  # type: ignore
@@ -288,6 +307,13 @@ class MujocoSimulator(Simulator):
     def _build_object(self, mjSpec, mjWorld, actor: ObjectActor):
         # asset_id = actor.asset.uid
 
+        # Primitive targets (e.g. a cube) have no collision meshes; build a
+        # single movable box geom from their extent instead.
+        from simple.assets.primitive import Primitive
+        if isinstance(actor.asset, Primitive):
+            self._build_primitive_object(mjSpec, mjWorld, actor)
+            return
+
         # TODO primitive types
         collision_meshes = actor.asset.collision_meshes_mujoco
         num_convex = len(collision_meshes)
@@ -328,7 +354,38 @@ class MujocoSimulator(Simulator):
                 solref = [0.005, 2]
             )
         mj_obj.add_freejoint(name=f'{label}_joint')
-    
+
+    def _build_primitive_object(self, mjSpec, mjWorld, actor: ObjectActor):
+        """Build a movable box geom for a primitive target (e.g. a cube).
+
+        Mirrors the mesh-object build (free body + friction/contact tuning) but
+        uses a single ``mjGEOM_BOX`` sized from the primitive's extent, so no
+        collision meshes are needed.
+        """
+        asset = actor.asset
+        label = asset.uid
+        if isinstance(asset, SemanticAnnotated):
+            label = asset.label
+
+        mj_obj = mjWorld.add_body(
+            name=label,
+            pos=actor.pose.position,
+            quat=actor.pose.quaternion,
+        )
+        mj_obj.add_geom(
+            name=f"{label}_box",
+            type=mujoco.mjtGeom.mjGEOM_BOX,
+            # MuJoCo box size is half-extents.
+            size=(0.5 * np.array(asset.size)).tolist(),
+            condim=4,
+            mass=0.1,
+            friction=[0.8, 0.05, 0.005],
+            # Fixed, neutral cardboard-box color (same every episode).
+            rgba=[0.76, 0.6, 0.42, 1],
+            solref=[0.005, 2],
+        )
+        mj_obj.add_freejoint(name=f"{label}_joint")
+
     def _build_articulated_object(self, mjSpec, mjWorld, actor: ArticulatedObjectActor):
         """Build the articulated object in the Mujoco simulator."""
         articulated_object_mjcf = mujoco.MjSpec.from_file(resolve_data_path(actor.asset.mjcf_path, auto_download=True))

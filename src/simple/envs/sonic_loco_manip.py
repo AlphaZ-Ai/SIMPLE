@@ -1,15 +1,12 @@
-"""
-SIMPLE: SIMulation-based Policy Learning and Evaluation
-
-Copyright (c) 2025 Songlin Wei and Contributors
-Licensed under the terms in LICENSE file.
-"""
+# Copyright (c) 2025-2026 The SIMPLE Authors
+# SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
 import mujoco
 import mujoco.viewer
 import numpy as np
+import time
 from threading import Lock
 from typing import Any
 
@@ -55,6 +52,25 @@ class SonicLocoManipEnv(BaseDualSim):
 
         self.sim_thread = None
         self.viewer = None
+        self.timing_event_sink = None
+        self.timing_context = None
+
+    def set_timing_event_sink(self, sink) -> None:
+        """Install an optional evaluation-only timing event sink."""
+        self.timing_event_sink = sink
+
+    def set_timing_context(self, context) -> None:
+        self.timing_context = context
+
+    def _emit_timing(self, kind: str) -> None:
+        if self.timing_event_sink is not None and self.timing_context is not None:
+            self.timing_event_sink(
+                {
+                    "kind": kind,
+                    "perf_ns": time.perf_counter_ns(),
+                    **self.timing_context,
+                }
+            )
 
 
     def init_publisher(self):
@@ -160,8 +176,18 @@ class SonicLocoManipEnv(BaseDualSim):
 
             # with self._telemetry.timer("mujoco.step"):
             self.mujoco.step(render=False) # FIXME  # only render on last step
-            if self.isaac:
+            # Optional per-physics-step hook (unset by default, so nothing
+            # changes for existing entry points).  The wbc path uses it to
+            # publish robot state at the physics rate, matching gear_sonic's
+            # own sim loop. Run it immediately after MuJoCo advances, before
+            # any IsaacSim synchronization/rendering work can block the external
+            # controller's lowstate heartbeat.
+            if getattr(self, "substep_callback", None) is not None:
+                self.substep_callback()
+            if self.isaac and (getattr(self, "sync_isaac_every_substep", True) or i == self.control_decimal - 1):
+                self._emit_timing("isaac_step_begin")
                 self.isaac.step(self.mujoco)
+                self._emit_timing("isaac_step_end")
         
         self.step_count += 1
         # with self._telemetry.timer("env._get_obs"):
@@ -199,6 +225,7 @@ class SonicLocoManipEnv(BaseDualSim):
         return self._render_frame()
 
     def _render_frame(self):
+        self._emit_timing("render_readback_begin")
         frame_mujoco = self.mujoco.render()
 
         if self.isaac:
@@ -212,11 +239,13 @@ class SonicLocoManipEnv(BaseDualSim):
                     frame_tiled[key] = np.concatenate([
                         isaac_img[:,:width//2,:],mujoco_img[:,width//2:,:] 
                     ], axis=1)
-                return frame_tiled
+                result = frame_tiled
             else:
-                return frame_isaac
+                result = frame_isaac
         else:
-            return frame_mujoco
+            result = frame_mujoco
+        self._emit_timing("render_readback_end")
+        return result
 
     def close(self):
         if self.viewer is not None:
