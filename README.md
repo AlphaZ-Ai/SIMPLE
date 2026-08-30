@@ -4,7 +4,7 @@
 <div align="center">
 
 [![arXiv](https://img.shields.io/badge/arXiv-2606.08278-df2a2a.svg)](https://arxiv.org/abs/2606.08278)
-[![Static Badge](https://img.shields.io/badge/Project-Page-a)](https://psi-lab.ai/SIMPLE)
+[![Documentation](https://img.shields.io/badge/Documentation-a)](https://psi-lab.ai/SIMPLE/docs/)
 [![Model](https://img.shields.io/badge/Hugging%20Face-Model-yellow)](https://huggingface.co/USC-PSI-Lab/psi-model)
 [![Data](https://img.shields.io/badge/Hugging%20Face-Data-pink)](https://huggingface.co/datasets/USC-PSI-Lab/psi-data)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
@@ -23,8 +23,9 @@ Contributors: [Songlin Wei](https://songlin.github.io/)\*, [Zhenhao Ni](https://
 
 
 ## 📢 News & Updates
-+ [2026-07-14] We released support for World Action Models: [Cosmos3](https://github.com/songlin/cosmos-framework/blob/main/docs/action_policy_simple_posttrain.md) and [DreamZero](https://github.com/physical-superintelligence-lab/Psi0/blob/main/baselines/dreamzero/README.md). 
-+ [x] [Integrate SONIC whole-body controller](#quick-start-for-sonic-wholebody-vla).
++ [x] [2026-08-30] [Integrate SONIC whole-body controller](#quick-start-for-sonic-wholebody-vla).
++ [x] [2026-07-14] We released support for World Action Models: [Cosmos3](https://github.com/songlin/cosmos-framework/blob/main/docs/action_policy_simple_posttrain.md) and [DreamZero](https://github.com/physical-superintelligence-lab/Psi0/blob/main/baselines/dreamzero/README.md). 
+
 
 ## Table of Contents
 - [What is SIMPLE?](#what～is～SIMPLE)
@@ -35,9 +36,6 @@ Contributors: [Songlin Wei](https://songlin.github.io/)\*, [Zhenhao Ni](https://
   - [[Option 3] Docker setup](#option-3-docker-setup)
 - [Quick start for SONIC wholebody VLA](#quick-start-for-sonic-wholebody-vla)
 - [Data Generation & Pipeline](#-data-generation--pipeline)
-  - [1. Data Collection ](#1-data-collection-methods)
-  - [2. Data Post-processing](#2-post-processing)
-  - [3. Fine-Tuning](#3-fine-tuning)
 - [Evaluation in SIMPLE](#-evaluation-in-simple)
 - [📊 Simulation Benchmarking Results](#-simulation-benchmarking-results)
 - [Citation](#citation)
@@ -55,21 +53,9 @@ It is a `simple` simulation environment supports:
 
 ## System Requirements
 
-SIMPLE is built on top of `IsaacSim 4.5` and `MuJoCo 3.3`.
+SIMPLE is built on top of `IsaacSim 4.5` and `MuJoCo 3.3`, and requires an RTX-class NVIDIA GPU on Ubuntu 22.04.
 
-| Component | Minimum | Recommended |
-| :--- | :--- | :--- |
-| **OS** | Ubuntu 22.04 | Ubuntu 22.04 |
-| **CPU** | Intel Core i7 / AMD Ryzen 7 | Intel Core i9 / AMD Ryzen 9 |
-| **RAM** | 32 GB | 64 GB |
-| **GPU** | NVIDIA RTX 2070 (8 GB VRAM) | NVIDIA RTX 3080 Ti / 4090 (16+ GB VRAM) |
-| **NVIDIA Driver** | 535.x | Latest |
-| **CUDA** | 12.x | 12.x |
-| **Python** | 3.10 | 3.10 |
-| **Storage** | 50 GB SSD | 100+ GB NVMe SSD |
-
-> An RTX-class NVIDIA GPU is required. GTX and older architectures are not supported.
-
+> 📖 **See the full hardware and software requirements at [psi-lab.ai/SIMPLE/docs](https://psi-lab.ai/SIMPLE/docs/).**
 
 ## Installation
 
@@ -171,99 +157,13 @@ Open http://127.0.0.1:8005 in a browser to view the documentation.
 
 ## [Option 2] Nix setup
 
-We recommend using [nix](https://nixos.org/) on fresh new linux host, otherwise, if you alread have install NVIDIA driver and CUDA, it will be faster to setup SIMPLE through `uv`.
+We recommend [nix](https://nixos.org/) on a fresh Linux host; if you already have the NVIDIA driver and CUDA installed, `uv` is the faster path.
 
-> [Nix](https://nixos.org/) is a modern package manager and build system that focuses on reproducibility, isolation, and declarative system configuration.
-
-> Instead of installing software directly into your system (like apt or pip), Nix builds everything in isolated environments and stores them in the /nix/store, where each package version is uniquely identified by a hash.
-
-1. Install Nix first, for all interactive questions, enter `y`:
-
-```bash
-sh <(curl --proto '=https' --tlsv1.2 -L [https://nixos.org/nix/install](https://nixos.org/nix/install)) --daemon
-
-```
-
-2. After Nix installation, open up a new shell to proceed.
-
-If you encounter issues with `nix` command not found, try
-
-```bash
-export PATH=/nix/var/nix/profiles/default/bin:$PATH
-
-
-```
-
-3. Pull git modules recursively
-
-```bash
-git submodule update --init --recursive
-
-```
-
-Run the prerequisite check once on a new host:
-
-```bash
-./scripts/nix/prereq-check.sh
-
-```
-
-`nix develop` auto-booststraps dependencies on first entry (or when `uv.lock` / `pyproject.toml` changes).
-
-Start the dev shell:
-
-```bash
-nix --extra-experimental-features "nix-command flakes" develop
-
-```
-
-Or run a single command inside the dev shell:
-
-```bash
-env -u LD_LIBRARY_PATH nix --extra-experimental-features "nix-command flakes" develop -c <command>
-
-```
-
-Do not activate the virtual environment directly with `source .venv/bin/activate` or `source .venv-nix/bin/activate`.
-This repo expects the Nix shell and the Python environment to be used together. The virtual environment alone is not a supported runtime.
-If your IDE terminal auto-sources `.venv-nix/bin/activate`, disable that behavior for this workspace or `deactivate` before entering through `nix develop`.
-
-Check if install successfully.
-
-```
-python -c "import simple; print(simple.__version__)"
-
-```
-
-You should see version number printed.
-
-* If encouter installtion or running issues, please checkout `Troubleshootings` in the Docs
-
-
-### Nix Notes
-
-The Nix runtime is documented in detail in [`docs/source/nix-runtime.md`](https://www.google.com/search?q=./docs/source/nix-runtime.md).
-
-Short version:
-
-* Mutually exclusive with Docker.
-* Intended host baseline: Linux with NVIDIA drivers already installed, especially Ubuntu hosts.
-* Run `./scripts/nix/prereq-check.sh` first on a new host.
-* Nix owns userspace; the host only owns the NVIDIA driver boundary.
-* The shell fails early on runtime pollution from `LD_LIBRARY_PATH`, `PYTHONPATH`, `PYTHONHOME`, or `LD_PRELOAD`.
-* The default Python environment is `.venv-nix`.
-* Bootstrap entry points are `./scripts/nix/bootstrap-python.sh`, `./scripts/nix/bootstrap-gpu.sh`, and `./scripts/nix/bootstrap.sh`.
-* Prefer importing `simple` as a library from inside the dev shell; treat the CLI as a thin convenience layer.
-
-Operational notes:
-
-* Remove a root-owned `.venv` left by older Docker runs with `sudo rm -rf .venv`.
-* Use `SIMPLE_AUTO_BOOTSTRAP=0` to skip auto-setup, or `SIMPLE_FORCE_BOOTSTRAP=1` to force re-bootstrap.
-* If you need to run `nix` from inside the dev shell, prefer `env -u LD_LIBRARY_PATH nix --extra-experimental-features "nix-command flakes" ...`.
+> 📖 **See the full Nix setup and runtime guide at [psi-lab.ai/SIMPLE/docs/nix-setup](https://psi-lab.ai/SIMPLE/docs/nix-setup/).**
 
 ### [Option 3] Docker setup
 
-We also support building and running SIMPLE in docker. Please refer to the documents for [docker setup](https://www.google.com/search?q=docs/source/tutorials/docker.md).
+We also support building and running SIMPLE in docker. Please refer to the documents for [docker setup](https://psi-lab.ai/SIMPLE/docs/docker.html).
 
 ---
 
@@ -333,183 +233,9 @@ tree is bind-mounted. Per-episode videos land in
 
 ## ⚙️ Data Generation & Pipeline
 
-SIMPLE provides a scalable pipeline to generate, process, and train policies using synthesized simulation data.
+SIMPLE provides a scalable pipeline to generate, process, and train policies using synthesized simulation data — covering data collection (teleoperation and automated motion planning), post-processing, and fine-tuning.
 
-### 1. Data Collection 
-
-We support two primary interfaces for gathering  data: **Teleoperation (human-in-the-loop)** and **Automated Motion Planning**. 
-
-Before running, adjust your environment variables to match your system topology.
-```bash
-# Example configurations (Adjust CUDA_VISIBLE_DEVICES and DISPLAY based on your host)
-export MUJOCO_GL="egl"
-export CUDA_VISIBLE_DEVICES="0" 
-export DISPLAY=":1"
-```
-
-
-
-
-##### Stage 1: Teleoperation in MuJoCo
-
-We perform the initial human-in-the-loop teleoperation inside the lightweight MuJoCo engine. This ensures minimal control loop latency and high-frequency physical interactions during the demonstration tracking.
-
-**Example Usage:**
-
-```bash
-export TASK_NAME=G1WholebodyOpenTrashCanTeleop-v0
-
-python -m simple.cli.teleop_decoupled_wbc \
-  simple/$TASK_NAME \
-  --target=graspnet1b:0 \
-  --sim-mode=mujoco \
-  --record \
-  --no-headless \
-  --success-criteria=2
-
-
-```
-> 🥽 **Hardware Setup:** We utilize **Pico VR headsets** for immersive human-in-the-loop teleoperation. For specific hardware configuration, controller mapping, and connection details, please refer to the [Teleoperation Setup Guide](docs/source/tutorials/teleop.md).
-
-
-> 💡 *To explore additional customizable options for teleoperation, run:*
-> `python -m simple.cli.teleop_decoupled_wbc --help`
-
-Supported Wholebody Teleop Tasks Include:
-
-* `simple/G1WholebodyOpenTrashCanTeleop-v0`
-* `simple/G1WholebodyBendPickTeleop-v0`
-* `simple/G1WholebodyBendPickAndPlaceTeleop-v0`
-* `simple/G1WholebodyBendHandoverTeleop-v0`
-* `simple/G1WholebodyPushOfficeChairTeleop-v0`
-* `simple/G1WholebodyOpenFaucetTeleop-v0`
-* `simple/G1WholebodyOpenOvenTeleop-v0`
-* `simple/G1WholebodyCloseDoorTeleop-v0`
-* `simple/G1WholebodyXMovePickTeleop-v0`
-* `simple/G1WholebodyXMoveBendCarryBoxSonic-v0`
-* `simple/G1WholebodyLocomotionPickBetweenTablesTeleop-v0`
-* `simple/G1WholebodyPickAndPlaceAndHugContainerTeleop-v0`
-* `simple/G1WholebodyHandoverTeleop-v0`
-
-
-##### Stage 2: Photorealistic Replay & Isaac Sim Rendering
-
-Once raw trajectories are successfully captured, pass them into the `replay_decoupled_wbc` suite. By specifying `--sim-mode=mujoco_isaac`, this stage replays the actions in MuJoCo while driving **Isaac Sim** simultaneously as a synchronized rendering engine. This step processes the raw stream into standard dataset structures (LeRobot format).
-
-**Example Usage:**
-
-```bash
-# Ensure $TASK_NAME matches the task used in Stage 1
-python -m simple.cli.replay_decoupled_wbc \
-  simple/$TASK_NAME \
-  --data-dir=data/teleop_decoupled_wbc/simple/$TASK_NAME/level-0/ \
-  --sim-mode=mujoco_isaac \
-  --no-headless \
-  --render-hz=50 \
-  --save-dir=data/replay_decoupled_wbc_output \
-  --record \
-  --resume \
-  --success-criteria=0.2
-
-```
-
-> 💡 **Tip:** If the replay success rate is low, try lowering the `--success-criteria` first.
-
-
-
-#### B. Automated Motion Planning 
-
-To bypass manual human interaction and scale up synthetic data generation, the `simple.cli.datagen` pipeline directly integrates **CuRobo for automated motion planning**. This allows us to procedurally batch-produce optimal demonstration trajectories without human teleop.
-
-Unlike the two-stage teleoperation process, **Motion Planning can be executed in a single step**. By setting `--sim-mode=mujoco_isaac`, the pipeline resolves the fast contact physics and motion planning within MuJoCo, while simultaneously driving Isaac Sim for photorealistic rendering. This directly outputs the final dataset in the standard LeRobot format.
-
-**Example Usage:**
-
-```bash
-export TASK_NAME=G1WholebodyTabletopHandoverMP-v0
-
-python -m simple.cli.datagen \
-  simple/$TASK_NAME \
-  --sim-mode=mujoco_isaac \
-  --render-hz=50 \
-  --no-headless \
-  --num-episodes=10
-
-```
-
-
-
-
-
-### 2. Post-processing
-
-To prepare the generated datasets for policy learning, we need to post-process the raw output data to be strictly compatible with the training pipeline of our foundation model, [Psi-0](https://github.com/physical-superintelligence-lab/Psi0).
-
-We provide two distinct post-processing scripts depending on how the data was collected:
-
-#### A. Post-processing Motion Planning Data
-For data generated via the automated motion planning pipeline (`datagen.py`), use `postprocess_psi0.py`. **This script supports wildcard matching (`*`)** to seamlessly merge data from multiple parallel generation batches into a single unified dataset.
-
-**Example Usage:**
-```bash
-python scripts/postprocess_psi0.py \
-  --sim-root="data/datagen*/simple/G1WholebodyBendPickMP-v0/level-0/" \
-  --out-dir=data/processed_psi0/G1WholebodyXMoveBendPickMP-v0 \
-  --skip=60
-
-```
-
-#### B. Post-processing Teleoperation Data
-
-For data captured through human teleoperation and rendered via Isaac Sim , use `postprocess_psi0_sonic.py`. Similarly, this script utilizes wildcard matching (`*`) to merge data from multiple teleop replay sessions.
-
-**Example Usage:**
-
-```bash
-python scripts/postprocess_psi0_sonic.py \
-  --sim-root="data/replay_decoupled_wbc_output*/simple/G1WholebodyPushOfficeChairTeleop-v0/level-0/" \
-  --out-dir=data/processed_psi0/G1WholebodyPushOfficeChairTeleop-v0 \
-  --skip=0 \
-  --total_episodes=100
-
-```
-
-**Key Arguments:**
-
-* `--sim-root`: The input directory containing the generated dataset. Note that quotes `""` are highly recommended when using wildcards (`*`) to prevent premature shell expansion.
-* `--out-dir`: The output directory where the Psi-0 compatible dataset will be saved.
-* `--skip`: Number of initial frames to skip (useful for bypassing static setup or initialization frames).
-* `--total_episodes`: Limits the total number of valid episodes to process and merge.
-
-
-
-### 3. Fine-Tuning
-
-To train or fine-tune foundation models directly using the structured datasets generated from the pipeline, we provide seamless integration with the **Psi-0** training stack.
-
-> 👉 **Quick Start:** You can skip fine-tuning entirely and evaluate right away by downloading our pre-trained [checkpoints for SIMPLE](https://huggingface.co/USC-PSI-Lab/psi-model/tree/main/psi0/simple-checkpoints).
-
-**Data Preparation:**
-If you wish to train from scratch or fine-tune, download the required [SIMPLE task data](https://huggingface.co/datasets/USC-PSI-Lab/psi-data/tree/main/simple) and extract it to your local workspace:
-
-```bash
-export TASK_NAME=G1WholebodyXMovePickTeleop-v0
-
-hf download USC-PSI-Lab/psi-data \
-  simple/$TASK_NAME.zip \
-  --local-dir=data \
-  --repo-type=dataset
-
-unzip data/simple/$TASK_NAME.zip -d data/simple
-
-```
-
-**Training Integration:**
-
-> 💡 **For full training instructions, please refer to the [Psi-0 Project README](https://github.com/physical-superintelligence-lab/Psi0).** >
-> The Psi-0 repository contains comprehensive, up-to-date documentation on setting up training environment variables, visualizing episodes, and launching the training scripts (e.g., `bash scripts/train/psi0/finetune-simple-psi0.sh`).
-
-
+> 📖 **See the full documentation at [psi-lab.ai/SIMPLE/docs](https://psi-lab.ai/SIMPLE/docs/).**
 
 ## 🎯 Evaluation in SIMPLE
 
