@@ -87,7 +87,7 @@ git submodule update --init --recursive
 
 We offer three options for setting up SIMPLE:
 
-## [Option 1] UV setup (Quickest)
+### [Option 1] UV setup (Quickest)
 
 
 Prerequisits:
@@ -155,7 +155,7 @@ Open http://127.0.0.1:8005 in a browser to view the documentation.
 
 > The document are working in progress. Feel free to raise questions using github issue, we will try to complete the document construction as soon as possible.
 
-## [Option 2] Nix setup
+### [Option 2] Nix setup
 
 We recommend [nix](https://nixos.org/) on a fresh Linux host; if you already have the NVIDIA driver and CUDA installed, `uv` is the faster path.
 
