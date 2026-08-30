@@ -103,12 +103,28 @@ docker attach simple-sim-1
 
 (e) run test code to verify installation
 ```
-cd /workspace/SIMPLE
+cd /workspace/simple
 source .venv/bin/activate
 python src/simple/cli/datagen.py simple/G1WholebodyBendPickMP-v0 --render-hz=50 --sim-mode=mujoco_isaac --headless --num-episodes=1
 ```
 
 
+
+### Container layout
+
+| Path | What it is |
+| --- | --- |
+| `/workspace/simple` | project root (`pyproject.toml`, `third_party/`, built cuRobo + SONIC artifacts) |
+| `/workspace/simple/.venv` | the Python venv — not a mount point, so the host checkout cannot shadow it |
+| `/workspace/.uv-cache` | uv download cache, bind-mounted from `./.uv-cache` |
+
+`docker-compose.yml` bind-mounts `src/`, `scripts/`, `examples/` and
+`${DATA_DIR:-./data}` from the host: edits to the source on the host take effect
+in the container immediately (the project is installed editable), and everything
+written to `data/` — downloaded assets and generated datasets alike — persists on
+the host. The project root itself is deliberately *not* mounted: `third_party/`
+holds artifacts built inside the image (cuRobo's CUDA kernels, the SONIC
+controller binary) that a host checkout would shadow.
 
 ### Useful Commands
 
@@ -120,7 +136,7 @@ without rebuilding the image:
 
 ```
 docker exec -it simple-sim-1 bash -c "\
-  uv pip install --python /workspace/SIMPLE/.venv/bin/python \
+  uv pip install --python /workspace/simple/.venv/bin/python \
     --no-build-isolation \
     -e 'third_party/decoupled_wbc[full]' \
     -e third_party/XRoboToolkit-PC-Service-Pybind_X86_and_ARM64 \

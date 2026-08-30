@@ -27,6 +27,27 @@ curobo are built from source against CUDA; macOS/ARM is unsupported.
 3. **XRoboToolkit PC Service** installed and running on the workstation wired to
    the headset.
 
+### Docker
+
+The image built by the repo `Dockerfile` performs steps 1-2 for you, including
+the SONIC C++/TensorRT controller (`SIMPLE_BUILD_SONIC_WBC=1`, the default) and
+the SONIC ONNX checkpoints (`SIMPLE_DOWNLOAD_SONIC_CKPT=1`). Docker cannot fetch
+git submodules or git-LFS blobs itself, so populate them on the host first:
+
+```bash
+git submodule update --init --depth 1 third_party/GR00T-WholeBodyControl
+git -C third_party/GR00T-WholeBodyControl lfs install --local
+git -C third_party/GR00T-WholeBodyControl lfs pull --include="gear_sonic_deploy/**"
+docker compose build sim          # add SIMPLE_FULL_INSTALL=1 for real-robot / GUI teleop
+```
+
+The controller binary lands at its usual path
+(`third_party/GR00T-WholeBodyControl/gear_sonic_deploy/target/release/g1_deploy_onnx_ref`)
+and its runtime library paths are in `~/tools/sonic_env.sh`, which the
+`scripts/run_*_wbc.sh` launchers source — so inside the container the launch
+commands are unchanged. The XRoboToolkit **PC Service** still runs on the host,
+not in the container.
+
 ## Required hardware
 
 * **PICO 4 / PICO 4 Ultra** headset

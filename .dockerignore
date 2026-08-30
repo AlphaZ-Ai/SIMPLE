@@ -17,3 +17,11 @@ __pycache__/
 *.egg-info/
 .tox/
 node_modules/*.egg-info/
+
+# SONIC WBC: keep stale host build artifacts out so the image builds its own
+# controller (build_sonic_controller.sh) against in-image paths.
+third_party/GR00T-WholeBodyControl/gear_sonic_deploy/build/
+third_party/GR00T-WholeBodyControl/gear_sonic_deploy/target/
+# ...and skip GR00T's ~640 MB of docs/media, which nothing at runtime reads.
+third_party/GR00T-WholeBodyControl/media/
+third_party/GR00T-WholeBodyControl/docs/

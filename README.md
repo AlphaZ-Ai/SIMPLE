@@ -24,7 +24,7 @@ Contributors: [Songlin Wei](https://songlin.github.io/)\*, [Zhenhao Ni](https://
 
 ## 📢 News & Updates
 + [2026-07-14] We released support for World Action Models: [Cosmos3](https://github.com/songlin/cosmos-framework/blob/main/docs/action_policy_simple_posttrain.md) and [DreamZero](https://github.com/physical-superintelligence-lab/Psi0/blob/main/baselines/dreamzero/README.md). 
-+ [ ] Integrate SONIC whole-body controller.
++ [x] [Integrate SONIC whole-body controller](#quick-start-for-sonic-wholebody-vla).
 
 ## Table of Contents
 - [What is SIMPLE?](#what～is～SIMPLE)
@@ -33,6 +33,7 @@ Contributors: [Songlin Wei](https://songlin.github.io/)\*, [Zhenhao Ni](https://
   - [[Option 1] UV setup (Quickest)](#option-1-uv-setup-quickest)
   - [[Option 2] Nix setup](#option-2-nix-setup)
   - [[Option 3] Docker setup](#option-3-docker-setup)
+- [Quick start for SONIC wholebody VLA](#quick-start-for-sonic-wholebody-vla)
 - [Data Generation & Pipeline](#-data-generation--pipeline)
   - [1. Data Collection ](#1-data-collection-methods)
   - [2. Data Post-processing](#2-post-processing)
@@ -263,6 +264,70 @@ Operational notes:
 ### [Option 3] Docker setup
 
 We also support building and running SIMPLE in docker. Please refer to the documents for [docker setup](https://www.google.com/search?q=docs/source/tutorials/docker.md).
+
+---
+
+## Quick start for SONIC wholebody VLA
+
+Evaluate a trained Psi-0 policy on the whole-body carry-box task with both sides in
+Docker. The two terminals below run **two different images from two different
+repositories** — the server on Psi-0's image, the client on SIMPLE's — and both are
+published on the GitHub Container Registry:
+
+```bash
+# Psi-0 server image
+docker pull ghcr.io/physical-superintelligence-lab/psi0:latest
+docker tag  ghcr.io/physical-superintelligence-lab/psi0:latest psi:train
+
+# SIMPLE client image
+docker pull ghcr.io/physical-superintelligence-lab/simple:latest
+docker tag  ghcr.io/physical-superintelligence-lab/simple:latest simple:latest
+```
+
+The retags matter: each `docker-compose.yml` refers to its image by a bare local
+tag (`psi:${PSI_TAG:-train}` and `simple:${DATE:-latest}`), so **neither `docker
+compose run` below pulls from ghcr on its own** — without the retag the Psi-0
+service cannot resolve its image and the SIMPLE service rebuilds from source
+instead.
+
+The remaining prerequisites — checkpoint, eval episodes — and a native `uv`
+alternative are in
+[Wholebody Loco-manipulation](docs/source/tutorials/wholebody_loco_manipulation.md).
+
+**Terminal A — policy server** (`psi:train`), from the [Psi-0](https://github.com/physical-superintelligence-lab/Psi0#docker-support) workspace:
+
+```bash
+export RUN=sonic-wbcbox.neckle.flow1000.cosine.lr1.0e-04.b256.gpus8.2608260223
+
+docker compose run --rm serve-psi0-sonic-http \
+    --policy psi0 \
+    --port 8014 \
+    --ckpt-step 40000 \
+    --run-dir .runs/finetune/$RUN \
+    --rtc \
+    --action-exec-horizon 24
+```
+
+Wait for `Server listens on 0.0.0.0:8014`, then leave it running.
+
+**Terminal B — evaluation client** (`simple:latest`), from the SIMPLE repository root:
+
+```bash
+GPUs=1 docker compose run --rm eval-sonic-wbc \
+    simple/G1WholebodyXMoveBendCarryBoxSonic-v0 psi0 \
+    --data-dir data/simple/G1WholebodyXMoveBendCarryBoxSonic-v0/dr-level-0 \
+    --host 127.0.0.1 \
+    --port 8014 \
+    --episode-start 0 \
+    --num-episodes 5 \
+    --dr-level 0 \
+    --eval-dir data/eval/sonic-psi0
+```
+
+Both compose stacks are host-networked, so `127.0.0.1` reaches across them; `--port`
+must match the server's. Keep `--data-dir` and `--eval-dir` under `data/` — only that
+tree is bind-mounted. Per-episode videos land in
+`data/eval/sonic-psi0/psi0/G1WholebodyXMoveBendCarryBoxSonic-v0/level-0/episode_*/`.
 
 ---
 

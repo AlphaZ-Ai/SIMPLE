@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass
 import hashlib
+import os
+import uuid
 from time import perf_counter, perf_counter_ns
 from datetime import datetime
 from typing import Any, Callable, Protocol
@@ -116,6 +118,9 @@ class Psi0HttpPolicy:
         self.base_url = f"http://{host}:{port}"
         self.timeout = timeout
         self.session = requests.Session()
+        # An RTC server serialises on one client at a time and, absent this id,
+        # identifies the client by its TCP source port. 
+        self.client_id = f"simple-eval-{os.getpid()}-{uuid.uuid4().hex[:8]}"
         self.request_count = 0
         self.episode_index = -1
         self.request_records: list[dict[str, Any]] = []
@@ -179,7 +184,9 @@ class Psi0HttpPolicy:
     ) -> np.ndarray:
         image_array = np.ascontiguousarray(image, dtype=np.uint8)
         state_array = np.ascontiguousarray(state, dtype=np.float32)
-        history: dict[str, Any] = {"reset": True} if self._reset_pending else {}
+        history: dict[str, Any] = {"client_id": self.client_id}
+        if self._reset_pending:
+            history["reset"] = True
         self._reset_pending = False
         started = perf_counter()
         record = {

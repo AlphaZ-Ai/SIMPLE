@@ -133,6 +133,11 @@ if [[ ! -x "$CONTROLLER_BIN" ]]; then
   fi
 fi
 [[ -f "$HOME/tools/sonic_env.sh" ]] || { echo "  ~/tools/sonic_env.sh still missing after build"; exit 1; }
+
+if [[ -z "${CUDAToolkit_ROOT:-}" && -x "${CUDA_HOME:-}/bin/nvcc" ]]; then
+  export CUDAToolkit_ROOT="$CUDA_HOME"
+fi
+
 start_controller() {
   (
     # upstream setup_env.sh/deploy.sh are not strict-mode-safe

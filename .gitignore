@@ -51,6 +51,7 @@ Thumbs.db
 data/*
 !data/README.md
 !data/_download.py
+!data/_download.sh
 !.env.sample
 
 # Sphinx build artifacts

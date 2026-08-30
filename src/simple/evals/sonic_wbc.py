@@ -103,10 +103,6 @@ def _sonic_config() -> dict[str, Any]:
     return result
 
 
-def _snapshot(env: SonicLocoManipEnv) -> dict[str, np.ndarray]:
-    return {"qpos": env.mjData.qpos.copy(), "qvel": env.mjData.qvel.copy()}
-
-
 def _progress_sample(env: SonicLocoManipEnv, info: dict[str, Any]) -> dict[str, float]:
     pelvis = np.asarray(env.mjData.body("pelvis").xpos[:2], dtype=np.float64)
     target = np.asarray(info.get("target", [np.nan] * 7), dtype=np.float64)
@@ -271,14 +267,6 @@ def run_sonic_wbc_eval(
             if isinstance(env, VideoRecorder):
                 env._init_writers(observation)
 
-            np.savez_compressed(
-                output / f"episode_{episode_id}_first_policy_observation.npz",
-                image=np.asarray(observation["head_stereo_left"]),
-                state=np.asarray(observation["joint_qpos"], dtype=np.float32),
-                instruction=np.asarray([sonic_env.task.instruction]),
-            )
-
-            trace = [_snapshot(sonic_env)]
             progress: list[dict[str, float]] = []
             budget = episode_budget_steps(policy.name, len(episode_data))
             termination = TerminationReason.BUDGET_EXHAUSTED
@@ -335,7 +323,6 @@ def run_sonic_wbc_eval(
                     }
                 )
                 steps += 1
-                trace.append(_snapshot(sonic_env))
                 progress.append(_progress_sample(sonic_env, info))
                 sonic_env.update_viewer()
                 sonic_env.update_reward()
@@ -349,48 +336,6 @@ def run_sonic_wbc_eval(
             progressing, progress_metrics = _progressing_at_timeout(progress)
             if termination != TerminationReason.BUDGET_EXHAUSTED:
                 progressing = False
-
-            episode_dir = output / f"episode_{episode_id}_artifacts"
-            episode_dir.mkdir(exist_ok=True)
-            np.savez_compressed(
-                episode_dir / "mujoco_state_trace.npz",
-                qpos=np.stack([item["qpos"] for item in trace]),
-                qvel=np.stack([item["qvel"] for item in trace]),
-            )
-            chunks = np.stack(agent.action_chunks) if agent.action_chunks else np.empty((0, 30, 78), np.float32)
-            np.save(episode_dir / "policy_actions.npy", chunks)
-            session_events = [
-                event
-                for event in events
-                if int(
-                    event.get(
-                        "session",
-                        event.get("ack", [0, -1])[1],
-                    )
-                )
-                == session_id
-                or int(event.get("episode", -1)) == episode_id
-            ]
-            (episode_dir / "events.json").write_text(
-                json.dumps(session_events, indent=2, default=str) + "\n"
-            )
-            (episode_dir / "inference_records.json").write_text(
-                json.dumps([asdict(record) for record in agent.inference_records], indent=2) + "\n"
-            )
-            policy_requests = getattr(agent.policy, "request_records", [])
-            with (episode_dir / "policy_requests.jsonl").open("w") as stream:
-                for index, request_record in enumerate(policy_requests):
-                    payload = dict(request_record)
-                    if index < len(agent.inference_records):
-                        inference_record = agent.inference_records[index]
-                        payload["chunk_index"] = inference_record.chunk_index
-                        payload["start_action_index"] = inference_record.start_action_index
-                    stream.write(json.dumps(payload) + "\n")
-            (episode_dir / "progress.json").write_text(
-                json.dumps({"samples": progress, "final_window": progress_metrics}, indent=2) + "\n"
-            )
-            if error_message:
-                (episode_dir / "error.txt").write_text(error_message + "\n")
 
             control_acks = [
                 event
@@ -415,9 +360,6 @@ def run_sonic_wbc_eval(
                 ack_count=len(control_acks),
             )
             results.append(result)
-            (episode_dir / "result.json").write_text(
-                json.dumps(asdict(result), indent=2) + "\n"
-            )
             sonic_env.set_timing_context(None)
 
         successes = sum(result.task_success for result in results)

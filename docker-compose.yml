@@ -1,9 +1,26 @@
 name: simple
 
+# Bind mounts.  Relative sources resolve against this file's directory.
+#
+#   Only the source and data trees are mounted -- deliberately NOT the project
+#   root.  The image builds artifacts under third_party/ (curobo, the SONIC
+#   controller) and keeps its venv at /workspace/simple/.venv; mounting the
+#   whole repo would shadow all of that with the host checkout.
 x-default-isaacsim-volumes: &default-isaacsim-volumes
+  # Source code: host edits take effect immediately, no rebuild.
   - type: bind
-    source: ${DATA_DIR}
-    target: /workspace/SIMPLE/data
+    source: ./src
+    target: /workspace/simple/src
+  - type: bind
+    source: ./scripts
+    target: /workspace/simple/scripts
+  - type: bind
+    source: ./examples
+    target: /workspace/simple/examples
+  # Data: downloaded assets and generated datasets persist on the host.
+  - type: bind
+    source: ${DATA_DIR:-./data}
+    target: /workspace/simple/data
   - type: bind
     source: /tmp/.X11-unix
     target: /tmp/.X11-unix
@@ -20,10 +37,14 @@ services:
       dockerfile: Dockerfile
       network: host
       args:
-        - TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST}
-        - TIMEZONE=${TIMEZONE}
+        - TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST:-8.0+PTX}
+        - TIMEZONE=${TIMEZONE:-UTC}
         # 0 = minimal (default), 1 = full (decoupled_wbc[full] — real-robot / GUI teleop)
         - SIMPLE_FULL_INSTALL=${SIMPLE_FULL_INSTALL:-0}
+        # 1 = build the SONIC WBC controller into the image (default), 0 = skip
+        - SIMPLE_BUILD_SONIC_WBC=${SIMPLE_BUILD_SONIC_WBC:-1}
+        # 1 = bake the SONIC ONNX checkpoints in (default), 0 = fetch at runtime
+        - SIMPLE_DOWNLOAD_SONIC_CKPT=${SIMPLE_DOWNLOAD_SONIC_CKPT:-1}
     network_mode: "host"
     x-bake:
       platforms:
@@ -37,6 +58,8 @@ services:
       - MUJOCO_GL=egl
       - NVIDIA_VISIBLE_DEVICES=${GPUs:-0}  # which GPUs to expose
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics
+      # set it in .env
+      - HF_TOKEN=${HF_TOKEN:-}
     volumes: *default-isaacsim-volumes
     shm_size: "16gb"
     mem_limit: "0"          # 0 = unlimited
@@ -69,9 +92,14 @@ services:
     entrypoint: ["uv", "run", "--no-sync", "eval-decoupled-wbc"]
     command: []
 
+  eval-sonic-wbc:
+    <<: *isaac-sim
+    entrypoint: ["bash", "scripts/run_eval_wbc.sh"]
+    command: []
+
   gpu-test:
     image: simple:${DATE:-latest}
-    command: /workspace/SIMPLE/.venv/bin/python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.device_count())"
+    command: /workspace/simple/.venv/bin/python -c "import torch; print(torch.cuda.is_available()); print(torch.cuda.device_count())"
     environment:
       - NVIDIA_VISIBLE_DEVICES=${GPUs:-0}  # which GPUs to expose
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility

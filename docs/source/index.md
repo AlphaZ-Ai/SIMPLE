@@ -37,9 +37,9 @@ Our goal is to build a simulation platform for policy learning and evalutions, f
 tutorials/index.md
 docker.md
 nix-setup/index.md
-data_gen_mp.md
-decoupled-wbc/index.md
 sonic-wbc/index.md
+decoupled-wbc/index.md
+data_gen_mp.md
 user-guides/index.md
 core/index.md
 tasks/index.md

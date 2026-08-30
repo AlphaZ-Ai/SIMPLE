@@ -58,6 +58,10 @@ export PYTHONUNBUFFERED=1
 export SONIC_AUTO_START=1
 export G1_ELBOW_POSE=${G1_ELBOW_POSE:-down}
 
+if [[ -z "${CUDAToolkit_ROOT:-}" && -x "${CUDA_HOME:-}/bin/nvcc" ]]; then
+  export CUDAToolkit_ROOT="$CUDA_HOME"
+fi
+
 : > "$CONTROLLER_LOG"
 setsid env DEPLOY="$DEPLOY" CONTROLLER_BIN="$CONTROLLER_BIN" bash -c '
   set +e +u +o pipefail
