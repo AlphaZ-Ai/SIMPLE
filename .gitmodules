@@ -30,3 +30,7 @@
 	url = https://github.com/songlin/GR00T-WholeBodyControl.git
 	shallow = true
 	branch = simple
+[submodule "third_party/GRAIL"]
+	path = third_party/GRAIL
+	url = https://github.com/AlphaZ-Ai/GRAIL.git
+	branch = main

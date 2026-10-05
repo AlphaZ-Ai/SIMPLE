@@ -70,7 +70,7 @@ class AMO_Policy:
         self.robot_type = robot_type
         self.device = device
         
-        if "dex3" in robot_type:
+        if "dex3" in robot_type or "dex1" in robot_type:
             self.joint_names = joint_names
 
             self.output_joint_names = [
