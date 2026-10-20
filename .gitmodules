@@ -34,3 +34,7 @@
 	path = third_party/GRAIL
 	url = https://github.com/AlphaZ-Ai/GRAIL.git
 	branch = main
+[submodule "third_party/humanoid-planner"]
+	path = third_party/humanoid-planner
+	url = https://github.com/AlphaZ-Ai/humanoid-planner.git
+	branch = develop

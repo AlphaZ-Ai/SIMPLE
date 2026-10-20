@@ -98,6 +98,8 @@ class PrimitiveAsseManager(AssetManager):
             return Box(*args, **kwargs)
         elif asset_id == "cube":
             return Cube(*args, **kwargs)
+        elif asset_id.startswith("cube_"):  # e.g. "cube_0.05": cube with that edge length (m)
+            return Cube(*args, size=float(asset_id.split("_", 1)[1]), **kwargs)
         else:
             raise ValueError(f"Unknown primitive asset_id: {asset_id}")
 

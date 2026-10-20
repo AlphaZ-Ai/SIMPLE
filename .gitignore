@@ -91,3 +91,7 @@ MUJOCO_LOG.TXT
 .claude/*
 .runtime-state/
 .robo-nix/
+
+# local installers and ROS/colcon logs
+Miniforge3-*.sh
+log/

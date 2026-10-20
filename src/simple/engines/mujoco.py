@@ -122,6 +122,53 @@ class MujocoSimulator(Simulator):
             return [self.render_step, joint_state, self.obj_names, obj_positions, obj_orientations, robot_position]
 
 
+    def _build_scene_collision(self, mj_worldbody):
+        """Static collision boxes for the HSSD house (walls + furniture), built by
+        scripts/build_hssd_collision.py, placed exactly where IsaacSim renders the
+        house (see IsaacSimulator add_scene / calc_surface_center)."""
+        scene = self.task.layout.scene
+        uid = scene.uid.split(":")[-1]
+        path = resolve_data_path(f"scenes/hssd_collision/{uid}.npz")
+        data = np.load(path)
+
+        yaw = float(scene.center_orientation[2])
+        assert np.allclose(scene.center_orientation[:2], data["rot_xy"]), "collision built for other x/y rotation"
+        # USD rotateXYZ = Rz @ Ry @ Rx; the boxes are already in Ry @ Rx @ scale frame
+        Rz = t3d.axangles.axangle2mat([0, 0, 1], np.radians(yaw))
+        Rg = (t3d.axangles.axangle2mat([0, 1, 0], np.radians(data["rot_xy"][1]))
+              @ t3d.axangles.axangle2mat([1, 0, 0], np.radians(data["rot_xy"][0])))
+        surface_top = Rz @ Rg @ data["surface_top"]
+        translation = np.asarray(scene.center_offset, dtype=np.float64) - surface_top
+        if self.task.robot.uid == "g1_sonic":  # mirrors IsaacSim's backward-compat hack
+            translation[2] = 0.0
+
+        body = mj_worldbody.add_body(name="scene_collision")
+        body.pos = translation + np.array([0.0, 0.0, float(data["floor"])])
+        body.quat = t3d.euler.euler2quat(0, 0, np.radians(yaw))
+
+        # tasks pick robot spawn spots without house collision in mind; keep the
+        # robot's footprint clear so it does not start inside furniture
+        boxes = data["boxes"]
+        clearance = getattr(self.task, "scene_collision_spawn_clearance", 0.3)
+        spawn = np.asarray(self.task.layout.actors["robot"].pose.position[:2], dtype=np.float64)
+        spawn_local = (Rz.T @ np.array([*(spawn - body.pos[:2]), 0.0]))[:2]
+        gap = np.maximum(np.abs(spawn_local - boxes[:, :2]) - boxes[:, 3:5], 0.0)
+        keep = np.linalg.norm(gap, axis=1) > clearance
+        if (~keep).any():
+            print(f"[mujoco] scene collision: removed {(~keep).sum()} boxes within {clearance} m of the robot spawn")
+        boxes = boxes[keep]
+
+        for i, (cx, cy, cz, hx, hy, hz) in enumerate(boxes):
+            body.add_geom(
+                name=f"scene_box_{i}",
+                type=mujoco.mjtGeom.mjGEOM_BOX,
+                pos=[cx, cy, cz],
+                size=[hx, hy, hz],
+                rgba=[0.6, 0.6, 0.65, 0.5],
+                friction=[1.0, 0.005, 0.0001],
+            )
+        self.scene_floor_z = float(body.pos[2])
+
     def _setup_scene(self, **kwargs):
         from simple.core.actor import RobotActor, ObjectActor, ArticulatedObjectActor, CameraEntity
         from simple.assets.primitive import Primitive
@@ -211,6 +258,9 @@ class MujocoSimulator(Simulator):
         )
         # add some friction for contact stability
         ground.friction = [1.0, 0.005, 0.0001]  # [sliding, torsional, rolling]
+
+        if getattr(self.task, "scene_collision", False):
+            self._build_scene_collision(mj_worldbody)
 
         # 5. disable gravity (for better PID control of arms)
         self.mjModel=mjSpec.compile()
